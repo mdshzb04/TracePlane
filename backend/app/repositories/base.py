@@ -36,6 +36,8 @@ class BaseRepository(Generic[ModelType]):
             if value is not None:
                 setattr(obj, key, value)
         await self.session.flush()
+        # Reload server-side defaults (e.g. updated_at onupdate) before async serialization.
+        await self.session.refresh(obj)
         return obj
 
     async def delete(self, obj: ModelType) -> None:

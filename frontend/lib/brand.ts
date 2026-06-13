@@ -12,4 +12,4 @@ export const PRODUCT_ICON = "/traceplane-icon.png?v=2"
 /** Trimmed transparent logo aspect ratio (width / height). */
 export const PRODUCT_LOGO_ASPECT = 582 / 101
 /** GitHub repo — update when public. */
-export const GITHUB_REPO_URL = "https://github.com/traceplane/traceplane"
+export const GITHUB_REPO_URL = "https://github.com/mdshzb04/TracePlane"
