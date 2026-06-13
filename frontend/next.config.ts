@@ -4,7 +4,7 @@ const backendUrl = process.env.BACKEND_INTERNAL_URL || "http://localhost:8000"
 
 const nextConfig: NextConfig = {
   reactStrictMode: true,
-  devIndicators: false,
+  devIndicators: { buildActivity: false },
   async rewrites() {
     return [
       {

@@ -77,7 +77,9 @@ export function idFromSdkProvider(name: string): UiProviderId | null {
 }
 
 /** Connected first, then catalog order. */
-export function sortProviders(items: { provider_id: string; connected: boolean; status: string | null }[]) {
+export function sortProviders<T extends { provider_id: string; connected: boolean; status?: string | null }>(
+  items: T[],
+): T[] {
   const order = new Map(UI_PROVIDER_IDS.map((id, index) => [id, index]))
   return [...items].sort((a, b) => {
     const aConn = a.connected && a.status === "connected"

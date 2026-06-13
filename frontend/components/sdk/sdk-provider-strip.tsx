@@ -8,7 +8,7 @@ import type { SdkProvider } from "@/lib/sdk-provider-snippets"
 
 type ProviderRow = {
   provider_id: string
-  status: string | null
+  status?: string | null
 }
 
 type SdkProviderStripProps = {
