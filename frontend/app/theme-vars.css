@@ -1,0 +1,58 @@
+/* Theme tokens — :root omitted so dark/light toggle applies cleanly on <html>. */
+html:not(.dark),
+html[data-theme="light"] {
+  --tp-canvas: 255 255 255;
+  --tp-surface-1: 245 246 246;
+  --tp-surface-2: 238 240 241;
+  --tp-surface-3: 232 234 236;
+  --tp-surface-4: 226 228 230;
+  --tp-hairline: 229 231 235;
+  --tp-hairline-strong: 209 213 219;
+  --tp-hairline-tertiary: 156 163 175;
+  --tp-ink: 17 24 39;
+  --tp-ink-muted: 55 65 81;
+  --tp-ink-subtle: 107 114 128;
+  --tp-ink-tertiary: 156 163 175;
+  --tp-primary: 94 106 210;
+  --tp-primary-hover: 130 143 255;
+  --tp-primary-focus: 94 105 209;
+  --tp-on-primary: 255 255 255;
+  --tp-success: 39 166 68;
+  --tp-danger: 239 68 68;
+  --tp-warning: 245 158 11;
+  --tp-brand-secure: 122 127 173;
+  --tp-panel-highlight: 0 0 0;
+}
+
+html.dark,
+html[data-theme="dark"] {
+  --tp-canvas: 1 1 2;
+  --tp-surface-1: 15 16 17;
+  --tp-surface-2: 20 21 22;
+  --tp-surface-3: 24 25 26;
+  --tp-surface-4: 25 26 27;
+  --tp-hairline: 35 37 42;
+  --tp-hairline-strong: 52 52 58;
+  --tp-hairline-tertiary: 62 62 68;
+  --tp-ink: 247 248 248;
+  --tp-ink-muted: 208 214 224;
+  --tp-ink-subtle: 138 143 152;
+  --tp-ink-tertiary: 98 102 109;
+  --tp-primary: 94 106 210;
+  --tp-primary-hover: 130 143 255;
+  --tp-primary-focus: 94 105 209;
+  --tp-on-primary: 255 255 255;
+  --tp-success: 39 166 68;
+  --tp-danger: 239 68 68;
+  --tp-warning: 245 158 11;
+  --tp-brand-secure: 122 127 173;
+  --tp-panel-highlight: 255 255 255;
+}
+
+html,
+body {
+  background-color: rgb(var(--tp-canvas));
+  color: rgb(var(--tp-ink));
+}
+
+/* Landing page inherits global light/dark theme from ThemeProvider. */
