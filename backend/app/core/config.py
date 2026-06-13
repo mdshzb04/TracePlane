@@ -14,7 +14,8 @@ class Settings(BaseSettings):
     REFRESH_TOKEN_EXPIRE_DAYS: int = 7
     LOG_LEVEL: str = "INFO"
     CORS_ORIGINS: str = "http://localhost:3000,http://127.0.0.1:3000"
-    ALLOW_REGISTRATION: bool = True
+    ALLOW_REGISTRATION: bool = False
+    EMAIL_PASSWORD_AUTH_ENABLED: bool = False
     FRONTEND_URL: str = "http://localhost:3000"
     BACKEND_PUBLIC_URL: str = "http://127.0.0.1:8000"
 

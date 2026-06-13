@@ -33,6 +33,8 @@ OAUTH_STATE_COOKIE = "tp_oauth_state"
 
 @router.post("/register", response_model=UserRead, status_code=201)
 async def register(data: UserRegister, db: DbSession):
+    if not settings.EMAIL_PASSWORD_AUTH_ENABLED:
+        raise BadRequestError("Account registration is disabled. Sign in with GitHub.")
     service = AuthService(db)
     user = await service.register(data)
     await AuditService(db).log("user.registered", "user", resource_id=user.id)
@@ -53,6 +55,8 @@ async def create_user(
 
 @router.post("/login", response_model=TokenResponse)
 async def login(data: LoginRequest, response: Response, db: DbSession):
+    if not settings.EMAIL_PASSWORD_AUTH_ENABLED:
+        raise BadRequestError("Email sign-in is disabled. Sign in with GitHub.")
     service = AuthService(db)
     tokens = await service.login(data.email, data.password)
     set_auth_cookies(response, tokens.access_token, tokens.refresh_token)
@@ -209,6 +213,8 @@ async def set_password(
     current_user: CurrentUser,
     db: DbSession,
 ):
+    if not settings.EMAIL_PASSWORD_AUTH_ENABLED:
+        raise BadRequestError("Email password sign-in is disabled.")
     service = AuthService(db)
     return await service.set_password(
         user_id=current_user.id,

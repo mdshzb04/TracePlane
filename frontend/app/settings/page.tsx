@@ -6,7 +6,7 @@ import { AppLayout } from "@/components/layout/app-layout"
 import { Card, PageHeader } from "@/components/shared"
 
 const links = [
-  { href: "/settings/account", label: "Account", icon: UserCircle, desc: "Sign-in methods and password" },
+  { href: "/settings/account", label: "Account", icon: UserCircle, desc: "GitHub sign-in and profile" },
   { href: "/settings/providers", label: "AI Providers", icon: Plug, desc: "Connect and validate provider API keys" },
   { href: "/settings/api-keys", label: "API Keys", icon: Key, desc: "Manage workspace ingestion keys" },
   { href: "/sdk", label: "SDK", icon: Code2, desc: "Connect provider, copy snippet, send test request" },
