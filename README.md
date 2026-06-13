@@ -342,6 +342,7 @@ MIT — see repository license file.
 #SCREENSHOT
 
 
-<img width="409" height="268" alt="Screenshot from 2026-06-13 21-15-11" src="https://github.com/user-attachments/assets/a732fa18-4d68-401f-ae3c-50cad825832d" />
+<img width="1854" height="995" alt="image" src="https://github.com/user-attachments/assets/2841213a-4595-4f18-af91-87971dda1ea8" />
+
 
 
