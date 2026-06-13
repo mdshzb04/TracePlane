@@ -1,0 +1,16 @@
+{
+  "name": "traceplane",
+  "version": "0.2.0",
+  "description": "Traceplane TypeScript SDK — send AI traces, costs, tokens, and latency",
+  "main": "dist/index.js",
+  "types": "dist/index.d.ts",
+  "scripts": {
+    "build": "tsc",
+    "test": "vitest run"
+  },
+  "dependencies": {},
+  "devDependencies": {
+    "typescript": "^5.6.0",
+    "vitest": "^2.1.0"
+  }
+}
