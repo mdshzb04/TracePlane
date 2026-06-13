@@ -37,7 +37,7 @@ function SdkCodeBlock({
   copied: boolean
   onProviderChange: (p: SdkProvider) => void
   onLanguageChange: (l: SdkLanguage) => void
-  providers: SdkProvider[]
+  providers: readonly SdkProvider[]
 }) {
   return (
     <div
