@@ -338,3 +338,10 @@ When `LANGFUSE_ENABLED=true`, the backend exports traces for executions, evaluat
 
 MIT — see repository license file.
 # TracePlane
+
+#SCREENSHOT
+
+
+<img width="409" height="268" alt="Screenshot from 2026-06-13 21-15-11" src="https://github.com/user-attachments/assets/a732fa18-4d68-401f-ae3c-50cad825832d" />
+
+
