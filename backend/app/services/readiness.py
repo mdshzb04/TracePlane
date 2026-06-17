@@ -106,7 +106,7 @@ class ReadinessService:
 
         key_missing = []
         if api_keys == 0:
-            key_missing.append("Create workspace API key")
+            key_missing.append("Create a Traceplane API key")
         categories.append(
             ReadinessCategory(
                 id="api_keys",

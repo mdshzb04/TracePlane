@@ -1,5 +1,6 @@
 from __future__ import annotations
 
+import os
 import time
 from contextlib import ContextDecorator
 from typing import Any, Optional
@@ -106,11 +107,11 @@ class Traceplane:
   def __init__(
     self,
     api_key: str,
-    base_url: str = "http://127.0.0.1:8000/api/v1",
+    base_url: str | None = None,
     timeout: float = 30.0,
   ):
     self.api_key = api_key
-    self.base_url = base_url.rstrip("/")
+    self.base_url = (base_url or os.environ.get("TRACEPLANE_BASE_URL", "http://127.0.0.1:8000/api/v1")).rstrip("/")
     self._client = httpx.Client(
       timeout=timeout,
       headers={"X-API-Key": api_key, "Content-Type": "application/json"},

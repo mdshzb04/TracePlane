@@ -1,15 +1,24 @@
+# Public SDK base URL for production (override in local dev with TRACEPLANE_BASE_URL)
+import os
+
 from traceplane.client import AgentOps, TraceSpan, Traceplane
+
+_DEFAULT_BASE_URL = os.environ.get("TRACEPLANE_BASE_URL", "http://127.0.0.1:8000/api/v1").rstrip("/")
 
 _client: Traceplane | None = None
 
 
 def init(
-    api_key: str,
-    base_url: str = "http://127.0.0.1:8000/api/v1",
+    api_key: str | None = None,
+    base_url: str | None = None,
     timeout: float = 30.0,
 ) -> Traceplane:
     global _client
-    _client = Traceplane(api_key=api_key, base_url=base_url, timeout=timeout)
+    resolved_key = api_key or os.environ.get("TRACEPLANE_API_KEY", "")
+    if not resolved_key:
+        raise ValueError("TRACEPLANE_API_KEY is required")
+    resolved_base = (base_url or _DEFAULT_BASE_URL).rstrip("/")
+    _client = Traceplane(api_key=resolved_key, base_url=resolved_base, timeout=timeout)
     return _client
 
 

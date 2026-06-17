@@ -4,8 +4,8 @@ import { useCallback, useEffect, useRef, useState } from "react"
 import Link from "next/link"
 import { Menu, Moon, Sun, X, Github } from "lucide-react"
 import { useTheme } from "@/components/theme-provider"
-import { TraceplaneIcon } from "@/components/brand/traceplane-icon"
-import { GITHUB_REPO_URL, PRODUCT_NAME } from "@/lib/brand"
+import { TraceplaneBrandMark } from "@/components/brand/traceplane-brand-mark"
+import { GITHUB_REPO_URL } from "@/lib/brand"
 import { cn } from "@/lib/utils"
 import { SectionLink } from "@/components/marketing/section-link"
 
@@ -42,15 +42,7 @@ function resolveActiveSection(): string {
 }
 
 function MarketingLogo() {
-  return (
-    <Link
-      href="/"
-      className="group inline-flex items-center gap-2.5 shrink-0 transition-transform duration-200 hover:scale-[1.02] active:scale-[0.98]"
-    >
-      <TraceplaneIcon size={30} className="transition-transform duration-300 group-hover:rotate-[-2deg]" />
-      <span className="text-[17px] font-semibold tracking-[-0.02em] text-ink">{PRODUCT_NAME}</span>
-    </Link>
-  )
+  return <TraceplaneBrandMark href="/" />
 }
 
 function NavLink({

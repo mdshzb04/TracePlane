@@ -35,7 +35,11 @@ let spanCounter = 0
 export function init(options: InitOptions): void {
   config = {
     apiKey: options.apiKey,
-    baseUrl: (options.baseUrl ?? "http://127.0.0.1:8000/api/v1").replace(/\/$/, ""),
+    baseUrl: (
+      options.baseUrl ??
+      (typeof process !== "undefined" ? process.env.TRACEPLANE_BASE_URL : undefined) ??
+      "http://127.0.0.1:8000/api/v1"
+    ).replace(/\/$/, ""),
     timeoutMs: options.timeoutMs ?? 30000,
   }
 }

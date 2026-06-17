@@ -1,4 +1,4 @@
-import { API_BASE_URL } from "@/lib/constants"
+import { getTraceplaneSdkBaseUrl, buildTraceplaneEnvBlock } from "@/lib/traceplane-sdk"
 
 export const SDK_PROVIDERS = [
   "OpenAI",
@@ -38,17 +38,21 @@ type ProviderMeta = {
   jsInstall: string
 }
 
-const DEFAULT_INGEST =
-  typeof window === "undefined"
-    ? API_BASE_URL.replace(/\/$/, "")
-    : (process.env.NEXT_PUBLIC_API_URL || "/api").replace(/\/$/, "")
-
 function resolve(opts?: SnippetOpts) {
   return {
     tpKey: opts?.traceplaneApiKey || "aoh_your_api_key",
-    ingest: (opts?.ingestUrl || DEFAULT_INGEST).replace(/\/$/, ""),
+    ingest: (opts?.ingestUrl || getTraceplaneSdkBaseUrl()).replace(/\/$/, ""),
     agent: opts?.agentName || "sdk-agent",
   }
+}
+
+function envPreamble(language: SdkLanguage, tpKey: string, ingest: string, providerKeyEnv?: string): string {
+  if (language === "cURL") {
+    return buildTraceplaneEnvBlock(tpKey, providerKeyEnv)
+  }
+  const lines = buildTraceplaneEnvBlock(tpKey, providerKeyEnv).split("\n")
+  const prefix = language === "Python" ? "# " : "// "
+  return lines.map((line) => `${prefix}${line}`).join("\n")
 }
 
 export const PROVIDER_META: Record<SdkProvider, ProviderMeta> = {
@@ -183,13 +187,13 @@ export function getSdkInstallCommand(provider: SdkProvider, lang: SdkLanguage): 
   const m = PROVIDER_META[provider]
   if (lang === "Python") return `pip install ${m.pyInstall}`
   if (lang === "TypeScript" || lang === "JavaScript") return `npm install ${m.tsInstall}`
-  return `export TRACEPLANE_API_KEY=...  export ${m.providerKeyEnv}=...`
+  return `export TRACEPLANE_API_KEY=...\nexport TRACEPLANE_BASE_URL=${getTraceplaneSdkBaseUrl()}  export ${m.providerKeyEnv}=...`
 }
 
 export function getTraceplaneInstallCommand(lang: SdkLanguage): string {
   if (lang === "Python") return "pip install traceplane"
   if (lang === "TypeScript" || lang === "JavaScript") return "npm install traceplane"
-  return "export TRACEPLANE_API_KEY=..."
+  return `export TRACEPLANE_API_KEY=...\nexport TRACEPLANE_BASE_URL=${getTraceplaneSdkBaseUrl()}`
 }
 
 function pyTraceHeader(ingest: string, agent: string, model: string, providerId: string): string {
@@ -198,7 +202,7 @@ import traceplane
 
 traceplane.init(
     api_key=os.environ["TRACEPLANE_API_KEY"],
-    base_url=os.environ.get("TRACEPLANE_API_URL", "${ingest}"),
+    base_url=os.environ.get("TRACEPLANE_BASE_URL", "${ingest}"),
 )
 
 with traceplane.trace("${agent}", model="${model}", provider="${providerId}") as span:
@@ -280,7 +284,7 @@ ${extraImports}
 
 init({
   apiKey: process.env.TRACEPLANE_API_KEY!,
-  baseUrl: process.env.TRACEPLANE_API_URL ?? "${ingest}",
+  baseUrl: process.env.TRACEPLANE_BASE_URL ?? "${ingest}",
 });`
 }
 
@@ -495,28 +499,28 @@ export function buildSdkProviderSnippet(
   const { tpKey, ingest, agent } = resolve(snippetOpts)
   const m = PROVIDER_META[provider]
   const typed = language === "TypeScript"
+  const preamble = envPreamble(language, tpKey, ingest, m.providerKeyEnv)
 
+  let body: string
   if (language === "Python") {
-    if (m.client === "anthropic") return anthropicPython(ingest, agent, m.model, m.providerId, m.providerKeyEnv)
-    if (m.client === "gemini") return geminiPython(ingest, agent, m.model, m.providerId, m.providerKeyEnv)
-    if (m.client === "cohere") return coherePython(ingest, agent, m.model, m.providerId, m.providerKeyEnv)
-    if (m.client === "mistral") return mistralPython(ingest, agent, m.model, m.providerId, m.providerKeyEnv)
-    if (m.client === "openai-compatible")
-      return openAiCompatiblePython(ingest, agent, m.model, m.providerId, m.providerKeyEnv, m.baseUrl!)
-    return openAiPython(ingest, agent, m.model, m.providerId, m.providerKeyEnv)
-  }
-
-  if (language === "TypeScript" || language === "JavaScript") {
+    if (m.client === "anthropic") body = anthropicPython(ingest, agent, m.model, m.providerId, m.providerKeyEnv)
+    else if (m.client === "gemini") body = geminiPython(ingest, agent, m.model, m.providerId, m.providerKeyEnv)
+    else if (m.client === "cohere") body = coherePython(ingest, agent, m.model, m.providerId, m.providerKeyEnv)
+    else if (m.client === "mistral") body = mistralPython(ingest, agent, m.model, m.providerId, m.providerKeyEnv)
+    else if (m.client === "openai-compatible")
+      body = openAiCompatiblePython(ingest, agent, m.model, m.providerId, m.providerKeyEnv, m.baseUrl!)
+    else body = openAiPython(ingest, agent, m.model, m.providerId, m.providerKeyEnv)
+  } else if (language === "TypeScript" || language === "JavaScript") {
     if (m.client === "anthropic")
-      return anthropicTypeScript(ingest, tpKey, agent, m.model, m.providerId, m.providerKeyEnv, typed)
-    if (m.client === "gemini")
-      return geminiTypeScript(ingest, tpKey, agent, m.model, m.providerId, m.providerKeyEnv, typed)
-    if (m.client === "cohere")
-      return cohereTypeScript(ingest, tpKey, agent, m.model, m.providerId, m.providerKeyEnv, typed)
-    if (m.client === "mistral")
-      return mistralTypeScript(ingest, tpKey, agent, m.model, m.providerId, m.providerKeyEnv, typed)
-    if (m.client === "openai-compatible")
-      return openAiCompatibleTypeScript(
+      body = anthropicTypeScript(ingest, tpKey, agent, m.model, m.providerId, m.providerKeyEnv, typed)
+    else if (m.client === "gemini")
+      body = geminiTypeScript(ingest, tpKey, agent, m.model, m.providerId, m.providerKeyEnv, typed)
+    else if (m.client === "cohere")
+      body = cohereTypeScript(ingest, tpKey, agent, m.model, m.providerId, m.providerKeyEnv, typed)
+    else if (m.client === "mistral")
+      body = mistralTypeScript(ingest, tpKey, agent, m.model, m.providerId, m.providerKeyEnv, typed)
+    else if (m.client === "openai-compatible")
+      body = openAiCompatibleTypeScript(
         ingest,
         tpKey,
         agent,
@@ -526,8 +530,10 @@ export function buildSdkProviderSnippet(
         m.baseUrl!,
         typed
       )
-    return openAiTypeScript(ingest, tpKey, agent, m.model, m.providerId, m.providerKeyEnv, typed)
+    else body = openAiTypeScript(ingest, tpKey, agent, m.model, m.providerId, m.providerKeyEnv, typed)
+  } else {
+    body = providerCurl(m.model, m.providerKeyEnv, m.client, m.baseUrl)
   }
 
-  return providerCurl(m.model, m.providerKeyEnv, m.client, m.baseUrl)
+  return `${preamble}\n\n${body}`
 }

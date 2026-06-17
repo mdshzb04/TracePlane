@@ -8,6 +8,7 @@ import { Card, PageHeader, LoadingState, ErrorState } from "@/components/shared"
 import { CostDisplay } from "@/components/observability"
 import { apiKeysService } from "@/services/api"
 import { setStoredApiKey } from "@/lib/onboarding-storage"
+import { buildTraceplaneEnvBlock, getTraceplaneSdkBaseUrl } from "@/lib/traceplane-sdk"
 import { ApiKey } from "@/types"
 
 export default function ApiKeysPage() {
@@ -17,7 +18,9 @@ export default function ApiKeysPage() {
   const [newKeyName, setNewKeyName] = useState("Default")
   const [createdKey, setCreatedKey] = useState<string | null>(null)
   const [creating, setCreating] = useState(false)
+  const [copiedEnv, setCopiedEnv] = useState(false)
   const [copiedId, setCopiedId] = useState<string | null>(null)
+  const traceplaneBaseUrl = getTraceplaneSdkBaseUrl()
 
   async function loadKeys() {
     setLoading(true)
@@ -68,19 +71,40 @@ export default function ApiKeysPage() {
       <div className="page-container max-w-3xl">
         <PageHeader
           title="API Keys"
-          subtitle="Workspace keys for SDK telemetry ingestion"
+          subtitle="Traceplane API keys for SDK telemetry ingestion"
         />
 
-        <p className="text-body-sm text-ink-subtle mb-6">
+        <p className="text-body-sm text-ink-subtle mb-4">
           <Link href="/sdk" className="text-primary hover:underline">SDK integration</Link>
           {" · "}
-          Set <code className="mono-text text-caption">TRACEPLANE_API_KEY</code> in your application environment.
+          Use one <code className="mono-text text-caption">TRACEPLANE_API_KEY</code> everywhere — same key as the SDK page.
         </p>
+
+        <Card className="mb-6">
+          <h3 className="text-body-sm font-medium text-ink-muted mb-2">Production base URL</h3>
+          <div className="flex items-center gap-2 rounded-md border border-hairline bg-surface-2 px-3 py-2 mb-4">
+            <code className="mono-text text-caption text-ink-subtle flex-1 break-all">
+              TRACEPLANE_BASE_URL={traceplaneBaseUrl}
+            </code>
+            <button
+              type="button"
+              onClick={() => {
+                navigator.clipboard.writeText(`TRACEPLANE_BASE_URL=${traceplaneBaseUrl}`)
+                setCopiedId("base-url")
+                setTimeout(() => setCopiedId(null), 2000)
+              }}
+              className="btn-secondary text-caption flex items-center gap-1.5 shrink-0 py-1 px-2"
+            >
+              <Copy className="w-3.5 h-3.5" />
+              {copiedId === "base-url" ? "Copied" : "Copy"}
+            </button>
+          </div>
+        </Card>
 
         {error && <ErrorState message={error} />}
 
         <Card className="mb-6">
-          <h3 className="text-body-sm font-medium text-ink-muted mb-4">Create API key</h3>
+          <h3 className="text-body-sm font-medium text-ink-muted mb-4">Create Traceplane API key</h3>
           <p className="text-body-sm text-ink-subtle mb-4">
             Agents are auto-discovered when your SDK sends telemetry. No manual registration required.
           </p>
@@ -91,26 +115,39 @@ export default function ApiKeysPage() {
             </button>
           </div>
           {createdKey && (
-            <div className="flex items-center gap-2 rounded-md border border-hairline bg-surface-2 px-3 py-2">
-              <code className="mono-text text-caption text-ink-subtle flex-1 break-all">{createdKey}</code>
+            <div className="space-y-3">
+              <div className="flex items-center gap-2 rounded-md border border-hairline bg-surface-2 px-3 py-2">
+                <code className="mono-text text-caption text-ink-subtle flex-1 break-all">{createdKey}</code>
+                <button
+                  type="button"
+                  onClick={() => {
+                    navigator.clipboard.writeText(createdKey)
+                    setCopiedId("new")
+                    setTimeout(() => setCopiedId(null), 2000)
+                  }}
+                  className="btn-secondary text-caption flex items-center gap-1.5 shrink-0 py-1 px-2"
+                >
+                  <Copy className="w-3.5 h-3.5" />
+                  {copiedId === "new" ? "Copied" : "Copy key"}
+                </button>
+              </div>
               <button
                 type="button"
                 onClick={() => {
-                  navigator.clipboard.writeText(createdKey)
-                  setCopiedId("new")
-                  setTimeout(() => setCopiedId(null), 2000)
+                  navigator.clipboard.writeText(buildTraceplaneEnvBlock(createdKey))
+                  setCopiedEnv(true)
+                  setTimeout(() => setCopiedEnv(false), 2000)
                 }}
-                className="btn-secondary text-caption flex items-center gap-1.5 shrink-0 py-1 px-2"
+                className="btn-secondary text-caption"
               >
-                <Copy className="w-3.5 h-3.5" />
-                {copiedId === "new" ? "Copied" : "Copy"}
+                {copiedEnv ? "Copied .env block" : "Copy .env block"}
               </button>
             </div>
           )}
         </Card>
 
         <Card>
-          <h3 className="text-body-sm font-medium text-ink-muted mb-4">Workspace keys</h3>
+          <h3 className="text-body-sm font-medium text-ink-muted mb-4">Your API keys</h3>
           {loading && <LoadingState />}
           {!loading && keys.length === 0 && (
             <p className="text-body-sm text-ink-subtle">No API keys yet. Create one to start sending telemetry.</p>

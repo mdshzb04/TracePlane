@@ -5,6 +5,7 @@ import { Check, Copy } from "lucide-react"
 import { cn } from "@/lib/utils"
 import { apiKeysService } from "@/services/api"
 import { markSdkInstalled, getStoredApiKey } from "@/lib/onboarding-storage"
+import { getTraceplaneSdkBaseUrl } from "@/lib/traceplane-sdk"
 import {
   buildSdkProviderSnippet,
   SDK_PROVIDERS,
@@ -109,7 +110,11 @@ export function ProviderShowcase({ variant = "marketing" }: ProviderShowcaseProp
   }, [variant])
 
   const fullCode = useMemo(
-    () => buildSdkProviderSnippet(provider, language, { traceplaneApiKey: apiKey }),
+    () =>
+      buildSdkProviderSnippet(provider, language, {
+        traceplaneApiKey: apiKey,
+        ingestUrl: getTraceplaneSdkBaseUrl(),
+      }),
     [provider, language, apiKey]
   )
 

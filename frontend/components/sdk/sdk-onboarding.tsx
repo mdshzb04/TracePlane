@@ -28,6 +28,7 @@ import {
 import { invalidateTelemetryCaches } from "@/lib/invalidate-telemetry"
 import { getStoredApiKey, markSdkInstalled, setStoredApiKey } from "@/lib/onboarding-storage"
 import { mergeProviderCatalog, staticProviderCatalog } from "@/lib/provider-catalog"
+import { getTraceplaneSdkBaseUrl, buildTraceplaneEnvBlock } from "@/lib/traceplane-sdk"
 import { friendlyErrorMessage } from "@/lib/friendly-error"
 import { cn } from "@/lib/utils"
 
@@ -142,6 +143,8 @@ export function SdkOnboarding() {
   const [creating, setCreating] = useState(false)
   const [traceplaneApiKey, setTraceplaneApiKey] = useState("")
   const [copiedKey, setCopiedKey] = useState(false)
+  const [copiedBaseUrl, setCopiedBaseUrl] = useState(false)
+  const [copiedEnv, setCopiedEnv] = useState(false)
   const [copiedSnippet, setCopiedSnippet] = useState(false)
   const [copiedInstall, setCopiedInstall] = useState<string | null>(null)
 
@@ -199,13 +202,16 @@ export function SdkOnboarding() {
   const hasTraceplaneKey = Boolean(traceplaneApiKey?.startsWith("aoh_"))
   const sdkInstalled = hasTraceplaneKey || Boolean(onboarding?.has_api_key)
 
+  const traceplaneBaseUrl = useMemo(() => getTraceplaneSdkBaseUrl(), [])
+
   const snippet = useMemo(
     () =>
       buildSdkProviderSnippet(provider, language, {
         traceplaneApiKey: traceplaneApiKey || undefined,
+        ingestUrl: traceplaneBaseUrl,
         agentName: DEFAULT_AGENT_NAME,
       }),
-    [provider, language, traceplaneApiKey]
+    [provider, language, traceplaneApiKey, traceplaneBaseUrl]
   )
 
   const progressItems = [
@@ -239,7 +245,11 @@ export function SdkOnboarding() {
     }
   }
 
-  function copyText(text: string, kind: "snippet" | "key" | "install", installId?: string) {
+  function copyText(
+    text: string,
+    kind: "snippet" | "key" | "baseUrl" | "env" | "install",
+    installId?: string
+  ) {
     navigator.clipboard.writeText(text)
     if (kind === "snippet") {
       setCopiedSnippet(true)
@@ -248,6 +258,12 @@ export function SdkOnboarding() {
     } else if (kind === "key") {
       setCopiedKey(true)
       setTimeout(() => setCopiedKey(false), 2500)
+    } else if (kind === "baseUrl") {
+      setCopiedBaseUrl(true)
+      setTimeout(() => setCopiedBaseUrl(false), 2500)
+    } else if (kind === "env") {
+      setCopiedEnv(true)
+      setTimeout(() => setCopiedEnv(false), 2500)
     } else if (kind === "install" && installId) {
       setCopiedInstall(installId)
       markSdkInstalled()
@@ -320,40 +336,77 @@ export function SdkOnboarding() {
         </div>
       </SectionCard>
 
-      {/* 4. Workspace SDK Key */}
-      <section className="panel-lift rounded-lg p-4 sm:p-5 space-y-3">
+      {/* 4. Traceplane credentials */}
+      <section className="panel-lift rounded-lg p-4 sm:p-5 space-y-4">
         <div>
-          <h2 className="text-body-sm font-medium text-ink">Workspace SDK Key</h2>
+          <h2 className="text-body-sm font-medium text-ink">Traceplane credentials</h2>
           <p className="text-caption text-ink-subtle mt-1 leading-relaxed">
-            Use this key in your application.
+            Copy your API key and production base URL into your app environment — the same pattern as OpenAI or Stripe.
           </p>
         </div>
-        <div className="flex flex-wrap gap-2">
-          <input
-            className="input flex-1 min-w-[200px] text-body-sm font-mono"
-            placeholder="aoh_..."
-            value={traceplaneApiKey}
-            onChange={(e) => {
-              setTraceplaneApiKey(e.target.value)
-              if (e.target.value.startsWith("aoh_")) {
-                setStoredApiKey(e.target.value)
-                markSdkInstalled()
-              }
-            }}
-          />
-          {hasTraceplaneKey && (
+
+        <div className="space-y-3">
+          <div>
+            <label className="block text-caption font-medium text-ink-subtle mb-1.5">Traceplane API Key</label>
+            <div className="flex flex-wrap gap-2">
+              <input
+                className="input flex-1 min-w-[200px] text-body-sm font-mono"
+                placeholder="aoh_..."
+                value={traceplaneApiKey}
+                onChange={(e) => {
+                  setTraceplaneApiKey(e.target.value)
+                  if (e.target.value.startsWith("aoh_")) {
+                    setStoredApiKey(e.target.value)
+                    markSdkInstalled()
+                  }
+                }}
+              />
+              {hasTraceplaneKey && (
+                <button
+                  type="button"
+                  className="btn-secondary text-body-sm transition-colors duration-150"
+                  onClick={() => copyText(traceplaneApiKey, "key")}
+                  aria-label="Copy Traceplane API key"
+                >
+                  {copiedKey ? <Check className="w-4 h-4 text-success" /> : <Copy className="w-4 h-4" />}
+                </button>
+              )}
+            </div>
+            <CopyToast message="API key copied" visible={copiedKey} />
+          </div>
+
+          <div>
+            <label className="block text-caption font-medium text-ink-subtle mb-1.5">Traceplane Base URL</label>
+            <div className="flex flex-wrap gap-2">
+              <code className="input flex-1 min-w-[200px] text-body-sm font-mono text-ink-muted">
+                TRACEPLANE_BASE_URL={traceplaneBaseUrl}
+              </code>
+              <button
+                type="button"
+                className="btn-secondary text-body-sm transition-colors duration-150"
+                onClick={() => copyText(`TRACEPLANE_BASE_URL=${traceplaneBaseUrl}`, "baseUrl")}
+                aria-label="Copy Traceplane base URL"
+              >
+                {copiedBaseUrl ? <Check className="w-4 h-4 text-success" /> : <Copy className="w-4 h-4" />}
+              </button>
+            </div>
+            <CopyToast message="Base URL copied" visible={copiedBaseUrl} />
+          </div>
+
+          <div className="flex flex-wrap items-center gap-2 pt-1">
             <button
               type="button"
               className="btn-secondary text-body-sm transition-colors duration-150"
-              onClick={() => copyText(traceplaneApiKey, "key")}
-              aria-label="Copy SDK key"
+              onClick={() =>
+                copyText(buildTraceplaneEnvBlock(traceplaneApiKey || "aoh_your_api_key"), "env")
+              }
             >
-              {copiedKey ? <Check className="w-4 h-4 text-success" /> : <Copy className="w-4 h-4" />}
+              {copiedEnv ? "Copied env block" : "Copy .env block"}
             </button>
-          )}
+          </div>
         </div>
-        <CopyToast message="SDK key copied" visible={copiedKey} />
-        <div className="flex flex-wrap items-center gap-2 pt-1">
+
+        <div className="flex flex-wrap items-center gap-2 border-t border-hairline pt-4">
           <input
             className="input w-40 text-body-sm"
             value={keyName}
@@ -366,7 +419,7 @@ export function SdkOnboarding() {
             disabled={creating}
             onClick={() => void handleCreateKey()}
           >
-            {creating ? <Loader2 className="w-4 h-4 animate-spin" /> : "Generate key"}
+            {creating ? <Loader2 className="w-4 h-4 animate-spin" /> : "Generate API key"}
           </button>
         </div>
       </section>
@@ -481,7 +534,7 @@ export function SdkOnboarding() {
           </p>
         )}
         {!hasTraceplaneKey && (
-          <p className="caption-text text-ink-tertiary mt-2">Generate a Workspace SDK Key above first.</p>
+          <p className="caption-text text-ink-tertiary mt-2">Generate a Traceplane API key above first.</p>
         )}
       </SectionCard>
 

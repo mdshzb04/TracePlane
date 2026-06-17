@@ -16,7 +16,7 @@ import {
   Plug,
 } from "lucide-react"
 import { cn } from "@/lib/utils"
-import { TraceplaneLogo } from "@/components/brand/traceplane-logo"
+import { TraceplaneBrandMark } from "@/components/brand/traceplane-brand-mark"
 
 const navGroups = [
   {
@@ -66,7 +66,7 @@ export function Sidebar({ open, onClose }: { open: boolean; onClose: () => void 
         )}
       >
         <div className="flex items-center justify-between h-14 px-4 border-b border-hairline bg-canvas">
-          <TraceplaneLogo href="/dashboard" height={32} priority />
+          <TraceplaneBrandMark href="/dashboard" iconSize={30} />
           <button onClick={onClose} className="lg:hidden text-ink-subtle hover:text-ink" aria-label="Close menu">
             <X className="w-5 h-5" />
           </button>
