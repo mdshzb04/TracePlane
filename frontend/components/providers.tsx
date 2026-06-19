@@ -4,6 +4,7 @@ import { useState } from "react"
 import { QueryClient, QueryClientProvider } from "@tanstack/react-query"
 import { DevStyleRecovery } from "@/components/dev-style-recovery"
 import { ThemeProvider } from "@/components/theme-provider"
+import { TooltipProvider } from "@/components/ui/tooltip"
 
 function makeQueryClient() {
   return new QueryClient({
@@ -23,8 +24,10 @@ export function Providers({ children }: { children: React.ReactNode }) {
   return (
     <QueryClientProvider client={queryClient}>
       <ThemeProvider>
-        <DevStyleRecovery />
-        {children}
+        <TooltipProvider>
+          <DevStyleRecovery />
+          {children}
+        </TooltipProvider>
       </ThemeProvider>
     </QueryClientProvider>
   )
