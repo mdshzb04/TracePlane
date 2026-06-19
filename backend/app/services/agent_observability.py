@@ -6,6 +6,7 @@ from sqlalchemy.ext.asyncio import AsyncSession
 from app.core.workspace_scope import get_agent_in_workspace
 from app.models.agent import Agent
 from app.models.execution import Execution
+from app.models.trace_span import TraceSpan
 from app.repositories.agent import AgentRepository
 from app.schemas.agent import AgentDetailRead, AgentHealthMetrics
 from app.services.health_engine import compute_health
@@ -26,12 +27,24 @@ class AgentObservabilityService:
         return await self._health_for_agent(agent_id)
 
     async def _health_for_agent(self, agent_id: uuid.UUID) -> AgentHealthMetrics:
+        span_latency = (
+            select(func.max(TraceSpan.latency_ms))
+            .where(
+                TraceSpan.execution_id == Execution.id,
+                TraceSpan.latency_ms.isnot(None),
+                TraceSpan.latency_ms > 0,
+            )
+            .correlate(Execution)
+            .scalar_subquery()
+        )
+        effective_latency = func.coalesce(func.nullif(Execution.latency_ms, 0), span_latency)
+
         stmt = (
             select(
                 func.count().label("total_executions"),
                 func.avg(case((Execution.status == "success", 1), else_=0)).label("success_rate"),
                 func.avg(case((Execution.status == "failed", 1), else_=0)).label("error_rate"),
-                func.avg(Execution.latency_ms).label("avg_latency_ms"),
+                func.avg(effective_latency).label("avg_latency_ms"),
                 func.sum(Execution.estimated_cost).label("total_cost"),
             )
             .where(Execution.agent_id == agent_id)

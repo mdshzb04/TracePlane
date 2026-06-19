@@ -36,7 +36,7 @@ _MODEL_PROVIDER_HINTS: tuple[tuple[str, str], ...] = (
 
 @dataclass(frozen=True)
 class DiscoveredAgentMeta:
-    framework: str
+    framework: str | None
     model: str
     provider: str | None
 
@@ -49,7 +49,7 @@ def discover_agent_meta(data: IngestTraceRequest) -> DiscoveredAgentMeta:
     return DiscoveredAgentMeta(framework=framework, model=model, provider=provider)
 
 
-def _infer_framework(data: IngestTraceRequest) -> str:
+def _infer_framework(data: IngestTraceRequest) -> str | None:
     if data.agent.framework:
         return data.agent.framework.strip().lower()
 
@@ -79,7 +79,7 @@ def _infer_framework(data: IngestTraceRequest) -> str:
     if "agno" in name:
         return "agno"
 
-    return "custom"
+    return None
 
 
 def _infer_model(data: IngestTraceRequest) -> str:

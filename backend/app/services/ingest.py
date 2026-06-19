@@ -17,6 +17,7 @@ from app.services.agent_discovery import discover_agent_meta
 from app.services.agent_observability import AgentObservabilityService
 from app.services.api_key_service import ApiKeyService
 from app.services.langfuse_service import langfuse_service
+from app.services.latency import resolve_execution_latency_ms
 from app.services.span_builder import SpanBuilder
 
 logger = logging.getLogger(__name__)
@@ -104,6 +105,10 @@ class IngestService:
             await self.session.flush()
 
         await self._persist_spans(execution.id, data, agent.external_name or agent.name, model, now)
+        resolved_latency = await self._resolved_latency_for_execution(execution.id, data)
+        if resolved_latency is not None:
+            execution.latency_ms = resolved_latency
+            await self.session.flush()
 
         langfuse_service.track_execution_start(
             execution_id=str(execution.id),
@@ -212,6 +217,19 @@ class IngestService:
             self.session.add(span)
         await self.session.flush()
 
+    async def _resolved_latency_for_execution(
+        self,
+        execution_id: uuid.UUID,
+        data: IngestTraceRequest,
+    ) -> int | None:
+        from app.models.trace_span import TraceSpan
+
+        result = await self.session.execute(
+            select(TraceSpan).where(TraceSpan.execution_id == execution_id)
+        )
+        spans = list(result.scalars().all())
+        return resolve_execution_latency_ms(data, spans)
+
     async def _upsert_agent(
         self,
         data: IngestTraceRequest,
@@ -248,7 +266,11 @@ class IngestService:
         agent = Agent(
             name=external_name,
             external_name=external_name,
-            description=f"Auto-discovered via SDK ({framework})",
+            description=(
+                f"Auto-discovered via SDK ({framework})"
+                if framework
+                else "Auto-discovered via SDK"
+            ),
             owner=meta.owner or "sdk",
             model=model,
             framework=framework,

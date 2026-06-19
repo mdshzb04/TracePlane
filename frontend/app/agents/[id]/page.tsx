@@ -11,7 +11,7 @@ import { AgentMetadataPanel } from "@/components/agents/agent-metadata-panel"
 import { Card, StatusBadge, LoadingState, ErrorState, EmptyState, Table, TableHead, TableHeader, TableRow, TableCell } from "@/components/shared"
 import { CostDisplay, HealthBadge } from "@/components/observability"
 import { formatLatency } from "@/lib/format"
-import { environmentSummary, formatRelativeTime, runtimeSummary } from "@/lib/agent-metadata"
+import { environmentSummary, formatRelativeTime, hasLatencyMeasurement, runtimeSummary } from "@/lib/agent-metadata"
 import { AgentDetail, TraceSummary } from "@/types"
 
 export default function AgentDetailPage() {
@@ -132,7 +132,11 @@ function AgentDetailContent({
         <MetricCard
           icon={<Activity className="w-4 h-4 text-warning" />}
           label="Avg latency"
-          value={hasTraffic ? formatLatency(agent.health.avg_latency_ms) : "—"}
+          value={
+            hasTraffic && hasLatencyMeasurement(agent.health.avg_latency_ms)
+              ? formatLatency(agent.health.avg_latency_ms)
+              : "—"
+          }
         />
         <MetricCard
           icon={<ClipboardCheck className="w-4 h-4 text-primary" />}

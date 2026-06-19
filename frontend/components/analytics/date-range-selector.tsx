@@ -3,7 +3,7 @@
 import { cn } from "@/lib/utils"
 import { DateRange, DateRangePreset, presetLabel } from "@/lib/analytics-range"
 
-const PRESETS: DateRangePreset[] = ["24h", "7d", "30d", "90d", "custom"]
+const PRESETS: DateRangePreset[] = ["24h", "7d", "30d", "90d"]
 
 export function DateRangeSelector({
   range,
@@ -20,10 +20,6 @@ export function DateRangeSelector({
             key={preset}
             type="button"
             onClick={() => {
-              if (preset === "custom") {
-                onChange({ ...range, preset: "custom" })
-                return
-              }
               const end = new Date()
               const start = new Date(end)
               if (preset === "24h") start.setHours(start.getHours() - 24)
@@ -43,32 +39,6 @@ export function DateRangeSelector({
           </button>
         ))}
       </div>
-      {range.preset === "custom" && (
-        <div className="flex items-center gap-2">
-          <input
-            type="datetime-local"
-            value={toLocalInput(range.start)}
-            onChange={(e) =>
-              onChange({ ...range, start: new Date(e.target.value), preset: "custom" })
-            }
-            className="rounded-md border border-hairline bg-surface-1 px-2 py-1.5 text-caption text-ink"
-          />
-          <span className="text-ink-tertiary text-caption">→</span>
-          <input
-            type="datetime-local"
-            value={toLocalInput(range.end)}
-            onChange={(e) =>
-              onChange({ ...range, end: new Date(e.target.value), preset: "custom" })
-            }
-            className="rounded-md border border-hairline bg-surface-1 px-2 py-1.5 text-caption text-ink"
-          />
-        </div>
-      )}
     </div>
   )
-}
-
-function toLocalInput(d: Date): string {
-  const pad = (n: number) => String(n).padStart(2, "0")
-  return `${d.getFullYear()}-${pad(d.getMonth() + 1)}-${pad(d.getDate())}T${pad(d.getHours())}:${pad(d.getMinutes())}`
 }

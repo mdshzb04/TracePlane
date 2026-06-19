@@ -25,6 +25,11 @@ export function isDefaultEnvironment(agent: Pick<AgentDetail, "environment" | "t
   return agent.tags.includes("auto-discovered")
 }
 
+export function isMeaningfulFramework(framework: string | null | undefined): framework is string {
+  if (!isMeaningfulText(framework)) return false
+  return framework.trim().toLowerCase() !== "custom"
+}
+
 export function formatFrameworkLabel(framework: string): string {
   const key = framework.trim().toLowerCase()
   const labels: Record<string, string> = {
@@ -35,7 +40,8 @@ export function formatFrameworkLabel(framework: string): string {
     pydanticai: "Pydantic AI",
     agno: "Agno",
     opentelemetry: "OpenTelemetry",
-    custom: "Custom",
+    "ai-sdk": "AI SDK",
+    quickstart: "Quickstart",
   }
   return labels[key] ?? framework
 }
@@ -94,7 +100,7 @@ export function truncateId(id: string, head = 8, tail = 4): string {
 
 export function runtimeSummary(agent: AgentDetail): string | null {
   const parts: string[] = []
-  if (isMeaningfulText(agent.framework)) parts.push(formatFrameworkLabel(agent.framework))
+  if (isMeaningfulFramework(agent.framework)) parts.push(formatFrameworkLabel(agent.framework))
   if (isMeaningfulText(agent.model)) parts.push(agent.model)
   if (isMeaningfulText(agent.provider)) parts.push(formatProviderLabel(agent.provider))
   return parts.length > 0 ? parts.join(" · ") : null
@@ -103,4 +109,8 @@ export function runtimeSummary(agent: AgentDetail): string | null {
 export function environmentSummary(agent: AgentDetail): string | null {
   if (!isMeaningfulText(agent.environment) || isDefaultEnvironment(agent)) return null
   return formatEnvironmentLabel(agent.environment)
+}
+
+export function hasLatencyMeasurement(latencyMs: number | null | undefined): boolean {
+  return latencyMs != null && !Number.isNaN(latencyMs) && latencyMs > 0
 }

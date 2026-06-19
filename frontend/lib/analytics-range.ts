@@ -1,4 +1,4 @@
-export type DateRangePreset = "24h" | "7d" | "30d" | "90d" | "custom"
+export type DateRangePreset = "24h" | "7d" | "30d" | "90d"
 
 export interface DateRange {
   preset: DateRangePreset
@@ -6,7 +6,7 @@ export interface DateRange {
   end: Date
 }
 
-export function presetRange(preset: Exclude<DateRangePreset, "custom">): DateRange {
+export function presetRange(preset: DateRangePreset): DateRange {
   const end = new Date()
   const start = new Date(end)
   if (preset === "24h") start.setHours(start.getHours() - 24)
@@ -39,7 +39,6 @@ export function presetLabel(preset: DateRangePreset): string {
     "7d": "7d",
     "30d": "30d",
     "90d": "90d",
-    custom: "Custom",
   }
   return labels[preset]
 }

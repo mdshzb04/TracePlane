@@ -7,15 +7,16 @@ import { InfoTooltip } from "@/components/ui/tooltip"
 import { CostDisplay } from "@/components/observability"
 import { ProviderAvatar } from "@/components/providers/provider-avatar"
 import {
-  environmentSummary,
   formatAbsoluteTime,
   formatEnvironmentLabel,
   formatFrameworkLabel,
   formatProviderLabel,
   formatRelativeTime,
   formatSourceLabel,
+  hasLatencyMeasurement,
   isAutoDiscoveryDescription,
   isDefaultEnvironment,
+  isMeaningfulFramework,
   isMeaningfulOwner,
   isMeaningfulText,
   truncateId,
@@ -87,7 +88,7 @@ function MetadataSection({ title, children }: { title: string; children: React.R
 function RuntimeBadges({ agent }: { agent: AgentDetail }) {
   const badges: React.ReactNode[] = []
 
-  if (isMeaningfulText(agent.framework)) {
+  if (isMeaningfulFramework(agent.framework)) {
     badges.push(
       <Badge key="framework" variant="primary">
         {formatFrameworkLabel(agent.framework)}
@@ -220,7 +221,7 @@ function buildRuntimeFields(agent: AgentDetail): MetadataField[] {
     {
       label: "Framework",
       hint: "Agent framework inferred from SDK metadata or span events.",
-      value: isMeaningfulText(agent.framework) ? (
+      value: isMeaningfulFramework(agent.framework) ? (
         formatFrameworkLabel(agent.framework)
       ) : (
         <MissingValue />
@@ -291,7 +292,11 @@ function TelemetrySummary({ agent }: { agent: AgentDetail }) {
     {
       label: "Avg latency",
       hint: "Mean end-to-end latency across executions.",
-      value: hasTraffic ? formatLatency(health.avg_latency_ms) : "—",
+      value: hasTraffic && hasLatencyMeasurement(health.avg_latency_ms) ? (
+        formatLatency(health.avg_latency_ms)
+      ) : (
+        <MissingValue label="Not measured" />
+      ),
     },
     {
       label: "Total cost",
@@ -390,9 +395,7 @@ export function AgentMetadataPanel({ agent }: { agent: AgentDetail }) {
               </Badge>
             ))}
           </div>
-        ) : (
-          <p className="text-body-sm text-ink-tertiary">No custom tags reported by the SDK.</p>
-        )}
+        ) : null}
         {agent.tags.includes("auto-discovered") && (
           <p className="text-caption text-ink-tertiary mt-2">
             This agent was auto-discovered from your first trace.
