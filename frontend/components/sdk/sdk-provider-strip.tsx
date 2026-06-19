@@ -21,7 +21,10 @@ export function SdkProviderStrip({ providers, selectedId, onSelect }: SdkProvide
   const [activeId, setActiveId] = useState<string | null>(null)
 
   const connectedIds = new Set(
-    providers.filter((p) => p.status === "connected" || p.status === "tested").map((p) => p.provider_id)
+    providers.filter((p) => p.status === "connected").map((p) => p.provider_id)
+  )
+  const testedIds = new Set(
+    providers.filter((p) => p.status === "tested").map((p) => p.provider_id)
   )
 
   function handleClick(id: (typeof UI_PROVIDER_IDS)[number]) {
@@ -33,6 +36,7 @@ export function SdkProviderStrip({ providers, selectedId, onSelect }: SdkProvide
   const statusId = activeId ?? selectedId
   const statusName = statusId ? PROVIDER_BRANDS[statusId as keyof typeof PROVIDER_BRANDS]?.name : null
   const isConnected = statusId ? connectedIds.has(statusId) : false
+  const needsReconnect = statusId ? testedIds.has(statusId) : false
 
   return (
     <div className="space-y-2">
@@ -63,8 +67,8 @@ export function SdkProviderStrip({ providers, selectedId, onSelect }: SdkProvide
         <p className="text-caption text-ink-subtle transition-opacity duration-150">
           <span className="text-ink-muted">{statusName}</span>
           <span className="mx-1.5 text-ink-tertiary">·</span>
-          <span className={isConnected ? "text-success" : "text-ink-tertiary"}>
-            {isConnected ? "Connected" : "Not Connected"}
+          <span className={isConnected ? "text-success" : needsReconnect ? "text-ink-muted" : "text-ink-tertiary"}>
+            {isConnected ? "Connected" : needsReconnect ? "Reconnect required" : "Not Connected"}
           </span>
         </p>
       )}

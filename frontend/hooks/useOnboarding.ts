@@ -2,7 +2,6 @@
 
 import { useCallback, useEffect, useSyncExternalStore } from "react"
 import { systemService } from "@/services/api"
-import { isSdkInstalledMarked } from "@/lib/onboarding-storage"
 import type { OnboardingStatus } from "@/types"
 
 const CACHE_KEY = "tp_onboarding_status"
@@ -42,13 +41,8 @@ function emit() {
 }
 
 function applyStatus(data: OnboardingStatus) {
-  const sdkMarked = isSdkInstalledMarked()
-  const steps = data.steps.map((step) =>
-    step.id === "sdk_installed" ? { ...step, complete: step.complete || sdkMarked } : step
-  )
-  const status = { ...data, steps }
-  snapshot = { status, loading: false, error: null }
-  writeCache(status)
+  snapshot = { status: data, loading: false, error: null }
+  writeCache(data)
   emit()
 }
 

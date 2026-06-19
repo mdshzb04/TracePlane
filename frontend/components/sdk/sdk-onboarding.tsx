@@ -26,7 +26,14 @@ import {
   type QuickstartProviderId,
 } from "@/lib/quickstart-providers"
 import { invalidateTelemetryCaches } from "@/lib/invalidate-telemetry"
-import { getStoredApiKey, markSdkInstalled, setStoredApiKey } from "@/lib/onboarding-storage"
+import {
+  getStoredApiKey,
+  isSdkStepDoneThisSession,
+  isTraceStepDoneThisSession,
+  markSdkStepDoneThisSession,
+  markTraceStepDoneThisSession,
+  setStoredApiKey,
+} from "@/lib/onboarding-storage"
 import { mergeProviderCatalog, staticProviderCatalog } from "@/lib/provider-catalog"
 import { getTraceplaneSdkBaseUrl, buildTraceplaneEnvBlock } from "@/lib/traceplane-sdk"
 import { friendlyErrorMessage } from "@/lib/friendly-error"
@@ -153,6 +160,8 @@ export function SdkOnboarding() {
   const [lastTraceId, setLastTraceId] = useState<string | null>(null)
   const [traceVerified, setTraceVerified] = useState(false)
   const [showSuccessBanner, setShowSuccessBanner] = useState(false)
+  const [sdkStepComplete, setSdkStepComplete] = useState(false)
+  const [traceStepComplete, setTraceStepComplete] = useState(false)
 
   const { data: providers = [] } = useQuery({
     queryKey: ["providers"],
@@ -162,13 +171,13 @@ export function SdkOnboarding() {
     staleTime: 30_000,
   })
 
-  const hasFirstTrace = Boolean(onboarding?.has_first_trace || lastTraceId)
   const selectedProvider = providers.find((p) => p.provider_id === providerId)
   const selectedProviderConnected = selectedProvider?.status === "connected"
   const selectedProviderTested = selectedProvider?.status === "tested"
-  const isProviderLinked = (status?: string | null) => status === "connected" || status === "tested"
-  const connectedCount = providers.filter((p) => isProviderLinked(p.status)).length
-  const providerConnected = providers.some((p) => isProviderLinked(p.status))
+  const connectedCount = providers.filter((p) => p.status === "connected").length
+  const providerConnected = connectedCount > 0
+
+  const traceReceivedThisSession = traceStepComplete || traceVerified || Boolean(lastTraceId)
 
   const { data: traceBounds } = useQuery({
     queryKey: ["sdk-trace-bounds"],
@@ -184,13 +193,18 @@ export function SdkOnboarding() {
         total: latest.total,
       }
     },
-    enabled: hasFirstTrace,
+    enabled: traceReceivedThisSession,
     staleTime: 30_000,
   })
 
   useEffect(() => {
     const stored = getStoredApiKey()
     if (stored?.startsWith("aoh_")) setTraceplaneApiKey(stored)
+    if (isSdkStepDoneThisSession()) setSdkStepComplete(true)
+    if (isTraceStepDoneThisSession()) {
+      setTraceStepComplete(true)
+      setShowSuccessBanner(true)
+    }
   }, [])
 
   useEffect(() => {
@@ -198,12 +212,8 @@ export function SdkOnboarding() {
     return () => clearInterval(interval)
   }, [refreshOnboarding])
 
-  useEffect(() => {
-    if (onboarding?.has_first_trace) setShowSuccessBanner(true)
-  }, [onboarding?.has_first_trace])
-
   const hasTraceplaneKey = Boolean(traceplaneApiKey?.startsWith("aoh_"))
-  const sdkInstalled = hasTraceplaneKey || Boolean(onboarding?.has_api_key)
+  const sdkInstalled = sdkStepComplete
 
   const traceplaneBaseUrl = useMemo(() => getTraceplaneSdkBaseUrl(), [])
 
@@ -220,8 +230,18 @@ export function SdkOnboarding() {
   const progressItems = [
     { label: "Provider Connected", complete: providerConnected },
     { label: "SDK Installed", complete: sdkInstalled },
-    { label: "First Trace Received", complete: hasFirstTrace },
+    { label: "First Trace Received", complete: traceReceivedThisSession },
   ]
+
+  function markSdkStepDone() {
+    markSdkStepDoneThisSession()
+    setSdkStepComplete(true)
+  }
+
+  function markTraceStepDone() {
+    markTraceStepDoneThisSession()
+    setTraceStepComplete(true)
+  }
 
   function selectProvider(p: SdkProvider) {
     setProvider(p)
@@ -242,7 +262,7 @@ export function SdkOnboarding() {
       const created = await apiKeysService.create(keyName.trim() || "Default")
       setTraceplaneApiKey(created.key)
       setStoredApiKey(created.key)
-      markSdkInstalled()
+      markSdkStepDone()
     } finally {
       setCreating(false)
     }
@@ -256,7 +276,7 @@ export function SdkOnboarding() {
     navigator.clipboard.writeText(text)
     if (kind === "snippet") {
       setCopiedSnippet(true)
-      markSdkInstalled()
+      markSdkStepDone()
       setTimeout(() => setCopiedSnippet(false), 2500)
     } else if (kind === "key") {
       setCopiedKey(true)
@@ -266,10 +286,11 @@ export function SdkOnboarding() {
       setTimeout(() => setCopiedBaseUrl(false), 2500)
     } else if (kind === "env") {
       setCopiedEnv(true)
+      markSdkStepDone()
       setTimeout(() => setCopiedEnv(false), 2500)
     } else if (kind === "install" && installId) {
       setCopiedInstall(installId)
-      markSdkInstalled()
+      markSdkStepDone()
       setTimeout(() => setCopiedInstall(null), 2500)
     }
   }
@@ -292,6 +313,7 @@ export function SdkOnboarding() {
       })
       setLastTraceId(response.trace_id)
       setTraceVerified(true)
+      markTraceStepDone()
       setShowSuccessBanner(true)
       await invalidateTelemetryCaches(queryClient)
       await queryClient.invalidateQueries({ queryKey: ["providers"] })
@@ -313,7 +335,7 @@ export function SdkOnboarding() {
       {/* 1. Setup Progress */}
       <SdkSetupProgress items={progressItems} />
 
-      {showSuccessBanner && hasFirstTrace && (
+      {showSuccessBanner && traceReceivedThisSession && (
         <div className="rounded-lg border border-success/30 bg-success/5 px-4 py-3 text-body-sm text-ink transition-all duration-300">
           🎉 Traceplane is successfully receiving telemetry.
         </div>
@@ -365,7 +387,6 @@ export function SdkOnboarding() {
                   setTraceplaneApiKey(e.target.value)
                   if (e.target.value.startsWith("aoh_")) {
                     setStoredApiKey(e.target.value)
-                    markSdkInstalled()
                   }
                 }}
               />
@@ -508,7 +529,7 @@ export function SdkOnboarding() {
           ))}
         </select>
         {testError && <p className="text-caption text-danger mb-3">{testError}</p>}
-        {(traceVerified || lastTraceId || selectedProviderTested) && !testError && (
+        {(traceVerified || lastTraceId) && !testError && (
           <p className="text-caption text-success mb-3 inline-flex items-center gap-1.5 transition-opacity duration-200">
             <Check className="w-3.5 h-3.5 shrink-0" strokeWidth={2.5} />
             Trace received successfully
@@ -556,7 +577,7 @@ export function SdkOnboarding() {
       </SectionCard>
 
       {/* 8. SDK Connected — bottom success state */}
-      {hasFirstTrace && onboarding && (
+      {traceReceivedThisSession && onboarding && (
         <section className="panel-lift rounded-lg p-4 sm:p-5 space-y-5 transition-all duration-300">
           <div>
             <h2 className="text-body-sm font-medium text-ink">SDK Connected</h2>

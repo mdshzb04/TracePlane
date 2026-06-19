@@ -22,3 +22,24 @@ export function isSdkInstalledMarked(): boolean {
   if (typeof window === "undefined") return false
   return localStorage.getItem(SDK_INSTALLED_KEY) === "1"
 }
+
+const SDK_SESSION_STEP = "tp_sdk_session_step"
+const SDK_SESSION_TRACE = "tp_sdk_session_trace"
+
+export function isSdkStepDoneThisSession(): boolean {
+  if (typeof window === "undefined") return false
+  return sessionStorage.getItem(SDK_SESSION_STEP) === "1"
+}
+
+export function markSdkStepDoneThisSession(): void {
+  sessionStorage.setItem(SDK_SESSION_STEP, "1")
+}
+
+export function isTraceStepDoneThisSession(): boolean {
+  if (typeof window === "undefined") return false
+  return sessionStorage.getItem(SDK_SESSION_TRACE) === "1"
+}
+
+export function markTraceStepDoneThisSession(): void {
+  sessionStorage.setItem(SDK_SESSION_TRACE, "1")
+}
