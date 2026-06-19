@@ -21,7 +21,7 @@ export function SdkProviderStrip({ providers, selectedId, onSelect }: SdkProvide
   const [activeId, setActiveId] = useState<string | null>(null)
 
   const connectedIds = new Set(
-    providers.filter((p) => p.status === "connected").map((p) => p.provider_id)
+    providers.filter((p) => p.status === "connected" || p.status === "tested").map((p) => p.provider_id)
   )
 
   function handleClick(id: (typeof UI_PROVIDER_IDS)[number]) {

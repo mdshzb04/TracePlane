@@ -144,7 +144,7 @@ const ProviderRow = memo(function ProviderRow({
   onTest: () => void
 }) {
   const brand = PROVIDER_BRANDS[provider.provider_id as UiProviderId]
-  const connected = provider.connected && provider.status === "connected"
+  const connected = provider.connected && (provider.status === "connected" || provider.status === "tested")
   const name = brand?.name ?? provider.name
 
   return (

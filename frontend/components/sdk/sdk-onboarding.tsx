@@ -163,9 +163,12 @@ export function SdkOnboarding() {
   })
 
   const hasFirstTrace = Boolean(onboarding?.has_first_trace || lastTraceId)
-  const connectedCount = providers.filter((p) => p.status === "connected").length
-  const providerConnected = providers.some((p) => p.status === "connected")
-  const selectedProviderConnected = providers.find((p) => p.provider_id === providerId)?.status === "connected"
+  const selectedProvider = providers.find((p) => p.provider_id === providerId)
+  const selectedProviderConnected = selectedProvider?.status === "connected"
+  const selectedProviderTested = selectedProvider?.status === "tested"
+  const isProviderLinked = (status?: string | null) => status === "connected" || status === "tested"
+  const connectedCount = providers.filter((p) => isProviderLinked(p.status)).length
+  const providerConnected = providers.some((p) => isProviderLinked(p.status))
 
   const { data: traceBounds } = useQuery({
     queryKey: ["sdk-trace-bounds"],
@@ -272,7 +275,11 @@ export function SdkOnboarding() {
   }
 
   async function handleVerifyIntegration() {
-    if (!hasTraceplaneKey || !selectedProviderConnected) return
+    if (!hasTraceplaneKey) return
+    if (selectedProviderTested) {
+      return
+    }
+    if (!selectedProviderConnected) return
     setTesting(true)
     setTestError(null)
     setTraceVerified(false)
@@ -287,6 +294,7 @@ export function SdkOnboarding() {
       setTraceVerified(true)
       setShowSuccessBanner(true)
       await invalidateTelemetryCaches(queryClient)
+      await queryClient.invalidateQueries({ queryKey: ["providers"] })
       await refreshOnboarding()
     } catch (err) {
       setTestError(friendlyErrorMessage(err instanceof Error ? err.message : String(err)))
@@ -500,7 +508,7 @@ export function SdkOnboarding() {
           ))}
         </select>
         {testError && <p className="text-caption text-danger mb-3">{testError}</p>}
-        {(traceVerified || lastTraceId) && (
+        {(traceVerified || lastTraceId || selectedProviderTested) && !testError && (
           <p className="text-caption text-success mb-3 inline-flex items-center gap-1.5 transition-opacity duration-200">
             <Check className="w-3.5 h-3.5 shrink-0" strokeWidth={2.5} />
             Trace received successfully
@@ -515,16 +523,25 @@ export function SdkOnboarding() {
             )}
           </p>
         )}
+        {selectedProviderTested && (
+          <p className="text-caption text-ink-muted mb-3">
+            To test again, paste your provider API key in{" "}
+            <Link href="/settings/providers" className="text-primary hover:underline">
+              Settings → Providers
+            </Link>{" "}
+            and save.
+          </p>
+        )}
         <button
           type="button"
           className="btn-primary inline-flex items-center gap-2 text-body-sm transition-colors duration-150"
-          disabled={testing || !hasTraceplaneKey || !selectedProviderConnected}
+          disabled={testing || !hasTraceplaneKey || (!selectedProviderConnected && !selectedProviderTested)}
           onClick={() => void handleVerifyIntegration()}
         >
           {testing ? <Loader2 className="w-4 h-4 animate-spin" /> : <Send className="w-4 h-4" />}
           Send Test Trace
         </button>
-        {!selectedProviderConnected && (
+        {!selectedProviderConnected && !selectedProviderTested && (
           <p className="caption-text text-ink-tertiary mt-3">
             Connect {provider} on the{" "}
             <Link href="/settings/providers" className="text-primary hover:underline">

@@ -17,6 +17,12 @@ from app.schemas.quickstart import QuickstartTestResponse
 from app.services.quickstart_service import QuickstartService
 from app.services.provider_validation import validate_provider_key
 
+RETEST_PROVIDER_KEY_MESSAGE = (
+    "Test trace already sent. To test again, paste your provider API key "
+    "in Settings → Providers and save."
+)
+TEST_CONSUMED_MARKER = "__sdk_test_consumed__"
+
 
 class ProviderService:
     def __init__(self, session: AsyncSession):
@@ -123,6 +129,10 @@ class ProviderService:
             return ProviderTestResult(
                 provider_id=provider_id, status="error", message="Provider not connected"
             )
+        if row.status == "tested":
+            return ProviderTestResult(
+                provider_id=provider_id, status="error", message=RETEST_PROVIDER_KEY_MESSAGE
+            )
 
         try:
             api_key = await self._provider_api_key(row)
@@ -159,7 +169,11 @@ class ProviderService:
             raise ValueError(f"Unsupported provider: {provider_id}")
 
         row = await self._load_connection(workspace_id, provider_id)
-        if not row or row.status != "connected":
+        if not row:
+            raise ValueError("Connect this provider before sending a test request")
+        if row.status == "tested":
+            raise ValueError(RETEST_PROVIDER_KEY_MESSAGE)
+        if row.status != "connected":
             raise ValueError("Connect this provider before sending a test request")
 
         try:
@@ -169,7 +183,7 @@ class ProviderService:
             row.last_error = str(exc)
             await self.session.flush()
             raise
-        return await QuickstartService(self.session).send_test_request(
+        result = await QuickstartService(self.session).send_test_request(
             workspace_id=workspace_id,
             provider_id=provider_id,
             provider_api_key=api_key,
@@ -178,3 +192,9 @@ class ProviderService:
             prompt=prompt,
             agent_name=agent_name,
         )
+        # One SDK verification test per saved provider key — reconnect to test again.
+        row.status = "tested"
+        row.api_key_encrypted = encrypt_secret(TEST_CONSUMED_MARKER)
+        row.last_error = None
+        await self.session.flush()
+        return result
