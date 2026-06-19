@@ -52,9 +52,16 @@ async def _bootstrap_dev_roles() -> None:
 
 @asynccontextmanager
 async def lifespan(app: FastAPI):
+    from app.core.encryption import encryption_self_test
     from app.core.otel import setup_otel
 
     setup_otel()
+    encryption_self_test()
+    if settings.ENV != "development" and not settings.ENCRYPTION_KEY.strip():
+        logger.warning(
+            "ENCRYPTION_KEY is not set — provider secrets use SECRET_KEY. "
+            "Set a dedicated ENCRYPTION_KEY in production and keep it stable."
+        )
     logger.info("Starting Traceplane API (env=%s)", settings.ENV)
     validate_resend_at_startup()
     if settings.ENV == "development":

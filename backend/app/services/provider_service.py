@@ -4,7 +4,7 @@ from datetime import datetime, timezone
 from sqlalchemy import select
 from sqlalchemy.ext.asyncio import AsyncSession
 
-from app.core.encryption import decrypt_secret, encrypt_secret
+from app.core.encryption import decrypt_secret_with_migration, encrypt_secret
 from app.models.provider_connection import ProviderConnection
 from app.schemas.provider import (
     ProviderCatalogItem,
@@ -21,6 +21,26 @@ from app.services.provider_validation import validate_provider_key
 class ProviderService:
     def __init__(self, session: AsyncSession):
         self.session = session
+
+    async def _load_connection(
+        self, workspace_id: uuid.UUID, provider_id: str
+    ) -> ProviderConnection | None:
+        result = await self.session.execute(
+            select(ProviderConnection).where(
+                ProviderConnection.workspace_id == workspace_id,
+                ProviderConnection.provider_id == provider_id,
+            )
+        )
+        return result.scalar_one_or_none()
+
+    async def _provider_api_key(self, row: ProviderConnection) -> str:
+        """Decrypt stored provider key and migrate ciphertext to the primary encryption key."""
+        await self.session.refresh(row, attribute_names=["api_key_encrypted"])
+        plaintext, needs_reencrypt = decrypt_secret_with_migration(row.api_key_encrypted)
+        if needs_reencrypt:
+            row.api_key_encrypted = encrypt_secret(plaintext)
+            await self.session.flush()
+        return plaintext
 
     async def list_catalog(self, workspace_id: uuid.UUID) -> list[ProviderCatalogItem]:
         result = await self.session.execute(
@@ -93,30 +113,24 @@ class ProviderService:
         )
 
     async def disconnect(self, workspace_id: uuid.UUID, provider_id: str) -> None:
-        result = await self.session.execute(
-            select(ProviderConnection).where(
-                ProviderConnection.workspace_id == workspace_id,
-                ProviderConnection.provider_id == provider_id,
-            )
-        )
-        row = result.scalar_one_or_none()
+        row = await self._load_connection(workspace_id, provider_id)
         if row:
             await self.session.delete(row)
 
     async def test(self, workspace_id: uuid.UUID, provider_id: str) -> ProviderTestResult:
-        result = await self.session.execute(
-            select(ProviderConnection).where(
-                ProviderConnection.workspace_id == workspace_id,
-                ProviderConnection.provider_id == provider_id,
-            )
-        )
-        row = result.scalar_one_or_none()
+        row = await self._load_connection(workspace_id, provider_id)
         if not row:
             return ProviderTestResult(
                 provider_id=provider_id, status="error", message="Provider not connected"
             )
 
-        api_key = decrypt_secret(row.api_key_encrypted)
+        try:
+            api_key = await self._provider_api_key(row)
+        except ValueError as exc:
+            row.status = "error"
+            row.last_error = str(exc)
+            await self.session.flush()
+            return ProviderTestResult(provider_id=provider_id, status="error", message=str(exc))
         status, message, latency_ms = await validate_provider_key(provider_id, api_key)
         now = datetime.now(timezone.utc)
         row.status = status
@@ -144,17 +158,17 @@ class ProviderService:
         if provider_id not in UI_PROVIDER_IDS:
             raise ValueError(f"Unsupported provider: {provider_id}")
 
-        result = await self.session.execute(
-            select(ProviderConnection).where(
-                ProviderConnection.workspace_id == workspace_id,
-                ProviderConnection.provider_id == provider_id,
-            )
-        )
-        row = result.scalar_one_or_none()
+        row = await self._load_connection(workspace_id, provider_id)
         if not row or row.status != "connected":
             raise ValueError("Connect this provider before sending a test request")
 
-        api_key = decrypt_secret(row.api_key_encrypted)
+        try:
+            api_key = await self._provider_api_key(row)
+        except ValueError as exc:
+            row.status = "error"
+            row.last_error = str(exc)
+            await self.session.flush()
+            raise
         return await QuickstartService(self.session).send_test_request(
             workspace_id=workspace_id,
             provider_id=provider_id,

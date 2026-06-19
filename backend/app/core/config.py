@@ -9,6 +9,9 @@ class Settings(BaseSettings):
     DATABASE_URL: str = "postgresql+asyncpg://agentops:agentops@localhost:5432/agentops_hub"
     DATABASE_URL_SYNC: str = "postgresql://agentops:agentops@localhost:5432/agentops_hub"
     SECRET_KEY: str = _INSECURE_SECRET
+    # Stable key for encrypting provider API keys — set once in production and never rotate
+    # without re-connecting providers. Falls back to SECRET_KEY when unset.
+    ENCRYPTION_KEY: str = ""
     ALGORITHM: str = "HS256"
     ACCESS_TOKEN_EXPIRE_MINUTES: int = 30
     REFRESH_TOKEN_EXPIRE_DAYS: int = 7
